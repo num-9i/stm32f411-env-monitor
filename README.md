@@ -2,7 +2,30 @@
 
 STM32F411RE(NUCLEO-F411RE) 기반 환경 모니터링 펌웨어 프로젝트입니다.  
 BMP280(온도/기압), AHT20(습도), SSD1306 OLED를 사용해 환경 데이터를 주기적으로 수집하고, UART CLI를 통해 운영 및 디버깅 기능을 제공합니다. 센서 측정 로직은 `HAL_Delay()` 중심의 순차 처리 대신 `HAL_GetTick()` 기반 non-blocking state machine으로 구성해, super-loop 구조에서도 응답성과 확장성을 확보하는 것을 목표로 했습니다.
+## Documentation
 
+- [Architecture Diagram](docs/architecture.md)
+- [Sensor State Machines](docs/state_machines.md)
+
+## Table of Contents
+
+- [Project Highlights](#project-highlights)
+- [Hardware](#hardware)
+- [System Overview](#system-overview)
+- [Main Loop](#main-loop)
+- [Software Architecture](#software-architecture)
+- [Architecture Diagram](#architecture-diagram)
+- [Sensor Design](#sensor-design)
+- [BMP280](#bmp280)
+- [AHT20](#aht20)
+- [Data Layer (`env_data`)](#data-layer-env_data)
+- [UART CLI](#uart-cli)
+- [LED Control](#led-control)
+- [Boot Sequence](#boot-sequence)
+- [Design Decisions](#design-decisions)
+- [Example UART Output](#example-uart-output)
+- [Current Limitations](#current-limitations)
+- [Future Work](#future-work)
 ## Project Highlights
 
 - STM32F411RE 기반 환경 모니터링 시스템(BMP280 / AHT20 / SSD1306)
