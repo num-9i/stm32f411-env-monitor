@@ -1,22 +1,15 @@
 # STM32F411RE Environmental Monitoring System
 
-STM32F411RE(NUCLEO-F411RE) 기반 환경 모니터링 펌웨어 포트폴리오 프로젝트입니다.
+STM32F411RE (NUCLEO-F411RE) 기반 환경 모니터링 펌웨어 프로젝트입니다.  
+BMP280(온도/기압), AHT20(습도), SSD1306 OLED, UART CLI를 사용해 센서 데이터를 수집하고 표시하며, 현재 동작 상태를 확인할 수 있도록 구성했습니다.
 
-이 프로젝트는 **BMP280(온도/기압)**, **AHT20(습도)**, **SSD1306 OLED**, **UART CLI**를 사용해 환경 데이터를 수집·표시·진단하는 시스템을 구현한 것입니다.  
-단순 동작 구현에 그치지 않고, **`HAL_Delay()` 중심의 blocking 흐름을 제거**하고 **`HAL_GetTick()` 기반 non-blocking state machine**으로 센서 측정 경로를 재구성해, super-loop 구조에서도 **응답성, 확장성, 디버깅 가능성**을 확보하는 데 초점을 맞췄습니다.
+이 프로젝트의 핵심은 센서 측정 경로를 `HAL_Delay()` 기반 순차 처리에서 `HAL_GetTick()` 기반 non-blocking 상태머신으로 재구성한 점입니다.  
+각 센서는 독립적인 task로 동작하며, 주기적 trigger, status polling, timeout 처리를 통해 super-loop 구조에서도 다른 기능과 병행 실행될 수 있도록 설계했습니다.
 
-특히 다음과 같은 설계 판단을 포트폴리오의 핵심 포인트로 삼았습니다.
+또한 raw sensor value와 사용자 표시용 값을 분리하고, `env_data` 레이어에서 반올림, 음수 처리, clamp, fixed-point 변환을 담당하도록 구성했습니다.  
+UART CLI를 통해 측정값, 센서 상태, 디버그 정보, 주기 보고 기능을 확인할 수 있으며, OLED에는 최신 환경 정보를 주기적으로 표시합니다.
 
-- **Non-blocking sensor task design**  
-  BMP280 / AHT20 측정을 독립적인 상태머신으로 분리하고, 주기적 trigger + status polling 방식으로 동작하도록 구성했습니다.
-- **Runtime fault awareness**  
-  polling throttle, software timeout, I2C error count를 적용해 센서 통신 이상이나 비정상 지연을 런타임에 관찰할 수 있게 했습니다.
-- **Separation of acquisition and presentation**  
-  raw sensor data와 사용자 표시용 값을 분리하고, `env_data` 레이어에서 반올림, 음수 부호 처리, clamp, fixed-point 변환을 담당하도록 정리했습니다.
-- **CLI-based observability**  
-  `ENV`, `DEBUG`, `REPORT`, `SENSSTAT` 등의 명령으로 운영 상태와 센서 상태를 확인할 수 있도록 했습니다.
-
-이 프로젝트는 **“작은 STM32 super-loop 펌웨어에서도 blocking delay를 줄이고, 상태 기반 제어와 진단 가능성을 의식해 설계할 수 있다”**는 점을 보여주는 것을 목표로 합니다.
+이 문서는 프로젝트의 구조, 설계 의도, 상태머신 동작, 빌드 환경, 주요 명령어를 정리한 기술 문서입니다.
 
 ## Documentation
 
