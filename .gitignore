@@ -1,0 +1,21 @@
+# Build output
+Debug/
+Release/
+**/Debug/
+**/Release/
+
+# STM32CubeIDE / Eclipse
+.settings/
+.metadata/
+*.launch
+
+# Temporary / OS files
+*.tmp
+*.log
+*.bak
+.DS_Store
+Thumbs.db
+
+# User-specific files
+*.user
+*.swp
