@@ -19,6 +19,7 @@ UART CLI를 통해 측정값, 센서 상태, 디버그 정보, 주기 보고 기
 ## Table of Contents
 
 - [Project Highlights](#project-highlights)
+- [Design Goals](#design-goals)
 - [Hardware](#hardware)
 - [System Overview](#system-overview)
 - [Main Loop](#main-loop)
@@ -35,7 +36,7 @@ UART CLI를 통해 측정값, 센서 상태, 디버그 정보, 주기 보고 기
 - [Example UART Output](#example-uart-output)
 - [Current Limitations](#current-limitations)
 - [Future Work](#future-work)
-- [Design Goals](#design-goals)
+
 ## Project Highlights
 
 - STM32F411RE 기반 환경 모니터링 시스템(BMP280 / AHT20 / SSD1306)
