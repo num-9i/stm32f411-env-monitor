@@ -35,6 +35,7 @@ UART CLI를 통해 측정값, 센서 상태, 디버그 정보, 주기 보고 기
 - [Example UART Output](#example-uart-output)
 - [Current Limitations](#current-limitations)
 - [Future Work](#future-work)
+- [Design Goals](#design-goals)
 ## Project Highlights
 
 - STM32F411RE 기반 환경 모니터링 시스템(BMP280 / AHT20 / SSD1306)
@@ -69,7 +70,18 @@ This project was organized around the following goals:
 
 부팅 후 시스템은 UART 수신 인터럽트, TIM2 PWM, I2C1을 초기화하고 I2C bus scan을 수행한 뒤 OLED와 센서를 초기화합니다. 이후 main loop에서는 두 센서 Task를 매 루프 호출하고, 드라이버 내부 최신 측정값을 `g_temp`, `g_humi`, `g_press` 및 raw 데이터 전역값으로 반영합니다. LED 자동 제어는 최신 습도값을 사용하고, OLED 표시 및 UART auto report는 10초 주기로만 수행됩니다. UART 명령 처리는 루프 말단에서 수행됩니다.
 
+## Current Limitations
 
+- Super-loop based firmware without RTOS
+- UART CLI is intended for human-readable diagnostics
+- No persistent logging in the current version
+- No fieldbus / industrial communication interface yet
+
+## Future Work
+
+- Modbus RTU slave interface for external device communication
+- External flash logging using W25Qxx
+- Optional RTC integration for timestamped logs
 
 ## Main Loop
 
