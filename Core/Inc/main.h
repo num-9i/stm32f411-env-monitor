@@ -41,7 +41,7 @@ typedef struct
     volatile int enabled;
     volatile int mode;
     volatile int bright_pulse;
-    volatile int blink_speed;
+    volatile int blink_interval;
     volatile int breath_speed;
     volatile int timer_signal;
     volatile int timer_count;

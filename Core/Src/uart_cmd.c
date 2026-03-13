@@ -18,6 +18,8 @@
 #include "env_data.h"
 #include "led_control.h"
 #include "main.h"
+#include "bmp280.h"
+#include "aht20.h"
 
 extern LED_Config_t g_led;
 extern const LED_Config_t default_led_config;
@@ -29,8 +31,9 @@ extern TIM_HandleTypeDef htim2;
 
 extern int auto_report_mode;
 
-/* Command table is defined in this file and referenced by cmd_HELP(). */
-extern CommandEntry cmd_table[];
+static const CommandEntry cmd_table[];
+
+
 
 /* -------------------------------------------------------------------------- */
 /* Logging                                                                    */
@@ -52,7 +55,7 @@ void UART_LOG(const char *fmt, ...)
 /* Sensor / report commands                                                   */
 /* -------------------------------------------------------------------------- */
 
-void cmd_REPORT(char *arg)
+static void cmd_REPORT(char *arg)
 {
     if (arg == NULL)
     {
@@ -76,7 +79,7 @@ void cmd_REPORT(char *arg)
     }
 }
 
-void cmd_SENSSTAT(char *arg)
+static void cmd_SENSSTAT(char *arg)
 {
     (void)arg;
 
@@ -84,7 +87,7 @@ void cmd_SENSSTAT(char *arg)
     UART_LOG("AHT20  I2C Errors: %lu", AHT20_Get_ErrorCount());
 }
 
-void cmd_ENV(char *arg)
+static void cmd_ENV(char *arg)
 {
     (void)arg;
 
@@ -99,7 +102,7 @@ void cmd_ENV(char *arg)
     UART_LOG(">> Ready.");
 }
 
-void cmd_DEBUG(char *arg)
+static void cmd_DEBUG(char *arg)
 {
     (void)arg;
 
@@ -130,7 +133,7 @@ void cmd_DEBUG(char *arg)
 /* LED control commands                                                       */
 /* -------------------------------------------------------------------------- */
 
-void cmd_TIMER(char *arg)
+static void cmd_TIMER(char *arg)
 {
     if (arg == NULL)
     {
@@ -152,7 +155,7 @@ void cmd_TIMER(char *arg)
     UART_LOG("The system will turn off after %d seconds.", g_led.timer_count / 1000);
 }
 
-void cmd_RESET(char *arg)
+static void cmd_RESET(char *arg)
 {
     (void)arg;
 
@@ -160,7 +163,7 @@ void cmd_RESET(char *arg)
     UART_LOG("System Factory Reset Complete!");
 }
 
-void cmd_BRIGHT(char *arg)
+static void cmd_BRIGHT(char *arg)
 {
     int input_val = 0;
 
@@ -185,7 +188,7 @@ void cmd_BRIGHT(char *arg)
     UART_LOG("Brightness memory updated to %d%%", input_val);
 }
 
-void cmd_LedStatus(char *arg)
+static void cmd_LedStatus(char *arg)
 {
     char *mode_str = "UNKNOWN";
     (void)arg;
@@ -208,7 +211,7 @@ void cmd_LedStatus(char *arg)
     UART_LOG("Current Enable Value: %d", g_led.enabled);
 }
 
-void cmd_BREATHSPEED(char *arg)
+static void cmd_BREATHSPEED(char *arg)
 {
     if (arg == NULL)
     {
@@ -226,21 +229,21 @@ void cmd_BREATHSPEED(char *arg)
     UART_LOG("Breath Speed Changed: %d", g_led.breath_speed);
 }
 
-void cmd_BREATH(char *arg)
+static void cmd_BREATH(char *arg)
 {
     (void)arg;
     g_led.mode = LED_MODE_BREATH;
     UART_LOG("Mode Changed: BREATHING");
 }
 
-void cmd_BLINK(char *arg)
+static void cmd_BLINK(char *arg)
 {
     (void)arg;
     g_led.mode = LED_MODE_BLINK;
     UART_LOG("Mode Changed: BLINKING");
 }
 
-void cmd_LED(char *arg)
+static void cmd_LED(char *arg)
 {
     if (arg == NULL)
     {
@@ -264,23 +267,23 @@ void cmd_LED(char *arg)
     }
 }
 
-void cmd_SPEED(char *arg)
+static void cmd_INTERVAL(char *arg)
 {
     if (arg == NULL)
     {
-        UART_LOG("Usage: SPEED [ms]");
+        UART_LOG("Usage: INTERVAL [ms]");
         return;
     }
 
-    g_led.blink_speed = atoi(arg);
-    UART_LOG("Speed Changed to %dms", g_led.blink_speed);
+    g_led.blink_interval = atoi(arg);
+    UART_LOG("Interval set to %dms", g_led.blink_interval);
 }
 
 /* -------------------------------------------------------------------------- */
 /* General utility commands                                                   */
 /* -------------------------------------------------------------------------- */
 
-void cmd_UPTIME(char *arg)
+static void cmd_UPTIME(char *arg)
 {
     uint32_t now = HAL_GetTick();
     uint32_t sec = now / 1000;
@@ -290,13 +293,17 @@ void cmd_UPTIME(char *arg)
     UART_LOG("System Uptime: %lu.%03lu seconds", sec, ms);
 }
 
-void cmd_HELLO(char *arg)
+static void cmd_HELLO(char *arg)
 {
     (void)arg;
     UART_LOG("Welcome to My STM32 System!");
 }
 
-void cmd_HELP(char *arg)
+
+
+
+
+static void cmd_HELP(char *arg)
 {
     (void)arg;
 
@@ -310,7 +317,7 @@ void cmd_HELP(char *arg)
     UART_LOG("--------------------------");
 }
 
-void cmd_DUMP(char *arg)
+static void cmd_DUMP(char *arg)
 {
     uint8_t *p = (uint8_t *)g_uart2.rx_buffer;
     (void)arg;
@@ -328,14 +335,10 @@ void cmd_DUMP(char *arg)
     }
 }
 
-/* -------------------------------------------------------------------------- */
-/* Command table                                                              */
-/* -------------------------------------------------------------------------- */
-
-CommandEntry cmd_table[] =
+static const CommandEntry cmd_table[] =
 {
     {"LED",         cmd_LED},
-    {"SPEED",       cmd_SPEED},
+    {"INTERVAL",       cmd_INTERVAL},
     {"HELLO",       cmd_HELLO},
     {"DUMP",        cmd_DUMP},
     {"HELP",        cmd_HELP},
@@ -353,6 +356,12 @@ CommandEntry cmd_table[] =
     {"SENSSTAT",    cmd_SENSSTAT},
     {NULL,          NULL}
 };
+
+/* -------------------------------------------------------------------------- */
+/* Command table                                                              */
+/* -------------------------------------------------------------------------- */
+
+
 
 /* -------------------------------------------------------------------------- */
 /* Command processing                                                         */

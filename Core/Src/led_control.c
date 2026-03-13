@@ -8,6 +8,9 @@
 
 #include "led_control.h"
 
+#define HUMI_BLINK_THRESHOLD 60.0f
+
+
 extern TIM_HandleTypeDef htim2;
 extern LED_Config_t g_led;
 
@@ -16,7 +19,7 @@ static void LED_Handle_Blink(void)
     static uint32_t count = 0;
     static int led_on = 1;
 
-    if (++count >= g_led.blink_speed)
+    if (++count >= g_led.blink_interval)
     {
         count = 0;
         led_on = !led_on;
@@ -67,7 +70,7 @@ static void LED_Handle_Breath(void)
 void LED_Auto_Control(float current_humi)
 {
     // Example policy: high humidity switches the LED into blink mode.
-    if (current_humi >= 60.0f)
+    if (current_humi >HUMI_BLINK_THRESHOLD)
     {
         g_led.mode = LED_MODE_BLINK;
     }
