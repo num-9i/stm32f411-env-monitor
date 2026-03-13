@@ -22,5 +22,5 @@ stateDiagram-v2
 
     IDLE --> MEASURING: 1 s elapsed\ntrigger measurement
     MEASURING --> MEASURING: poll throttle
-    MEASURING --> IDLE: bit7 == 0/update humidity
-    MEASURING --> IDLE: read fail/timeout
+    MEASURING --> IDLE: bit7 == 0\update humidity
+    MEASURING --> IDLE: read fail\timeout
