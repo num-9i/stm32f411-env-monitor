@@ -8,7 +8,7 @@ This project uses a super-loop architecture with non-blocking sensor tasks.
 flowchart LR
   subgraph App[Application Layer]
     MAIN[main.c\nsuper-loop scheduler]
-    CLI[uart_cmd.c\ncmd_table + UART_ProcessCommand]
+    CLI[uart_cmd.c\nCLI command parser]
     OLED[ssd1306.c\nOLED Update every 10s]
     LED[led_control.c\nLED_Update_Handler + LED_Auto_Control]
     ENV[env_data.c\nformatting + fixed-point conversion]
