@@ -1,20 +1,15 @@
-
-
-# Sensor State Machines
-
 ## BMP280
 
 ```mermaid
 stateDiagram-v2
-  [*] --> IDLE
+    [*] --> IDLE
 
-  IDLE --> MEASURING: (now - last_bmp_read_time) >= 1000\nwrite 0xF4 = 0x25\nstart_tick = now
-  IDLE --> IDLE: trigger write fail\nerror_count++\nlast_bmp_read_time = now
+    IDLE --> MEASURING: 1 s period elapsed\ntrigger forced measurement\nstart_tick = now
 
-  MEASURING --> MEASURING: poll throttle < 5ms
-  MEASURING --> IDLE: timeout > 200ms\nerror_count++
-  MEASURING --> IDLE: status read fail\nerror_count++
-  MEASURING --> DATA_READY: status bit3 == 0
+    MEASURING --> MEASURING: poll throttle
+    MEASURING --> DATA_READY: status bit3 == 0\nmeasurement complete
+    MEASURING --> IDLE: status read fail\nerror_count++
+    MEASURING --> IDLE: timeout > 200 ms\nerror_count++
 
-  DATA_READY --> IDLE: burst read 0xF7..0xFC\nassemble adc_P / adc_T\ncompensate temp / press
-  DATA_READY --> IDLE: burst read fail\nerror_count++
+    DATA_READY --> IDLE: burst read raw data\ncompensate temp / press
+    DATA_READY --> IDLE: burst read fail\nerror_count++
