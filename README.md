@@ -49,13 +49,25 @@ UART CLI를 통해 측정값, 센서 상태, 디버그 정보, 주기 보고 기
 
 ## Design Goals
 
-This project was organized around the following goals:
+본 프로젝트는 다음과 같은 설계 목표를 기준으로 구성했습니다:
 
-- Replace delay-based sensor reads with non-blocking task flows
-- Keep the super-loop responsive while multiple peripherals are active
-- Separate raw acquisition data from user-facing formatted values
-- Provide basic runtime observability through UART CLI
-- Handle sensor wait states and communication faults explicitly
+- Delay 기반 센서 측정 흐름을 **non-blocking 상태머신(State Machine)** 구조로 전환
+- 다중 페리퍼럴 동작 상황에서도 super-loop의 응답성 유지
+- 센서 raw 데이터 수집부와 사용자 표시용 데이터 가공부(formatting)의 분리
+- UART CLI를 통한 런타임 상태 확인 및 디버깅 가능성 확보
+- 센서 대기 상태와 I2C 통신 오류에 대한 명시적 timeout / fault handling 적용
+
+## Current Limitations
+
+- RTOS가 적용되지 않은 super-loop 기반 bare-metal 펌웨어
+- UART CLI는 machine-to-machine 통신보다는 human-readable 진단 및 개발 편의성에 초점이 맞춰져 있음
+- 현재 버전에는 전원 차단 이후에도 데이터를 유지하는 persistent logging 기능이 없음
+  
+## Future Work
+
+- **Modbus RTU Slave**: 외부 산업용 제어기(PLC/HMI)와 연동 가능한 표준 통신 인터페이스 추가
+- **External Flash Logging**: W25Qxx SPI 플래시 메모리를 이용한 비휘발성 데이터 로깅 기능 추가
+- **RTC Integration**: 로깅 데이터에 정확한 timestamp를 기록하기 위한 RTC 연동
   
 ## Hardware
 
