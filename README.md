@@ -45,6 +45,16 @@ UART CLI를 통해 측정값, 센서 상태, 디버그 정보, 주기 보고 기
 - 환경 값과 raw ADC 데이터는 `env_data` 레이어로 통합하고, 반올림 / 음수 부호 / 클램핑 등 표현 로직을 별도 분리
 - I2C error count를 노출해 센서 통신 이상 여부를 런타임에 확인 가능
 
+## Design Goals
+
+This project was organized around the following goals:
+
+- Replace delay-based sensor reads with non-blocking task flows
+- Keep the super-loop responsive while multiple peripherals are active
+- Separate raw acquisition data from user-facing formatted values
+- Provide basic runtime observability through UART CLI
+- Handle sensor wait states and communication faults explicitly
+  
 ## Hardware
 
 - MCU: STM32F411RE
@@ -58,6 +68,8 @@ UART CLI를 통해 측정값, 센서 상태, 디버그 정보, 주기 보고 기
 ## System Overview
 
 부팅 후 시스템은 UART 수신 인터럽트, TIM2 PWM, I2C1을 초기화하고 I2C bus scan을 수행한 뒤 OLED와 센서를 초기화합니다. 이후 main loop에서는 두 센서 Task를 매 루프 호출하고, 드라이버 내부 최신 측정값을 `g_temp`, `g_humi`, `g_press` 및 raw 데이터 전역값으로 반영합니다. LED 자동 제어는 최신 습도값을 사용하고, OLED 표시 및 UART auto report는 10초 주기로만 수행됩니다. UART 명령 처리는 루프 말단에서 수행됩니다.
+
+
 
 ## Main Loop
 
