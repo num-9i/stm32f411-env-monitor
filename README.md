@@ -57,17 +57,7 @@ UART CLI를 통해 측정값, 센서 상태, 디버그 정보, 주기 보고 기
 - UART CLI를 통한 런타임 상태 확인 및 디버깅 가능성 확보
 - 센서 대기 상태와 I2C 통신 오류에 대한 명시적 timeout / fault handling 적용
 
-## Current Limitations
 
-- RTOS가 적용되지 않은 super-loop 기반 bare-metal 펌웨어
-- UART CLI는 machine-to-machine 통신보다는 human-readable 진단 및 개발 편의성에 초점이 맞춰져 있음
-- 현재 버전에는 전원 차단 이후에도 데이터를 유지하는 persistent logging 기능이 없음
-  
-## Future Work
-
-- **Modbus RTU Slave**: 외부 산업용 제어기(PLC/HMI)와 연동 가능한 표준 통신 인터페이스 추가
-- **External Flash Logging**: W25Qxx SPI 플래시 메모리를 이용한 비휘발성 데이터 로깅 기능 추가
-- **RTC Integration**: 로깅 데이터에 정확한 timestamp를 기록하기 위한 RTC 연동
   
 ## Hardware
 
@@ -85,16 +75,15 @@ UART CLI를 통해 측정값, 센서 상태, 디버그 정보, 주기 보고 기
 
 ## Current Limitations
 
-- Super-loop based firmware without RTOS
-- UART CLI is intended for human-readable diagnostics
-- No persistent logging in the current version
-- No fieldbus / industrial communication interface yet
-
+- RTOS가 적용되지 않은 super-loop 기반 bare-metal 펌웨어
+- UART CLI는 machine-to-machine 통신보다는 human-readable 진단 및 개발 편의성에 초점이 맞춰져 있음
+- 현재 버전에는 전원 차단 이후에도 데이터를 유지하는 persistent logging 기능이 없음
+  
 ## Future Work
 
-- Modbus RTU slave interface for external device communication
-- External flash logging using W25Qxx
-- Optional RTC integration for timestamped logs
+- **Modbus RTU Slave**: 외부 산업용 제어기(PLC/HMI)와 연동 가능한 표준 통신 인터페이스 추가
+- **External Flash Logging**: W25Qxx SPI 플래시 메모리를 이용한 비휘발성 데이터 로깅 기능 추가
+- **RTC Integration**: 로깅 데이터에 정확한 timestamp를 기록하기 위한 RTC 연동
 
 ## Main Loop
 
