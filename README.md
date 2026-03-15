@@ -260,27 +260,28 @@ AHT err cnt  : 0
 
 ## Modbus RTU / RS485
 
-이 프로젝트는 외부 장치가 표준 산업용 프로토콜로 환경 데이터를 읽을 수 있도록 **Modbus RTU Slave 통신**을 추가했다.  
-현재 구현 범위는 **Function Code `0x03` (Read Holding Registers)** 이며, 주요 센서값과 상태 정보를 holding register에 매핑해 PC master에서 읽을 수 있도록 구성했다.
+이 프로젝트는 외부 장치가 표준 산업용 프로토콜로 환경 데이터를 읽을 수 있도록 **Modbus RTU Slave 통신**을 추가했습니다.  
+현재 구현 범위는 **Function Code `0x03` (Read Holding Registers)** 이며, 주요 센서값과 상태 정보를 holding register에 매핑해 PC master에서 읽을 수 있도록 구성했습니다.
 
 ### Why USART1 was used
 
-NUCLEO-F411RE 보드에서는 기본 **USART2(PA2/PA3)** 가 **ST-LINK VCP** 경로와 연결되어 있어, 외부 TTL-to-RS485 모듈과 직접 연동할 때 제약이 있었다.  
-초기에는 USART2 기반으로 Modbus RTU를 붙이려 했지만, 실제 RS485 통신 경로를 검증하는 과정에서 보드 라우팅 특성 때문에 실통신 구성이 불편하다는 점을 확인했다.
+NUCLEO-F411RE 보드에서는 기본 **USART2(PA2/PA3)** 가 **ST-LINK VCP** 경로와 연결되어 있어, 외부 TTL-to-RS485 모듈과 직접 연동할 때 제약이 있었습니다.
+초기에는 USART2 기반으로 Modbus RTU를 붙이려 했지만, 실제 RS485 통신 경로를 검증하는 과정에서 보드 라우팅 특성 때문에 실통신 구성이 불편하다는 점을 확인했습니다.
 
-이를 해결하기 위해 Modbus RTU 통신 포트를 **USART1(PA9/PA10)** 으로 재배치했다.  
-이 과정에서 `USART1_IRQHandler()`와 `USART1_IRQn` NVIC enable 설정이 필요했고, 인터럽트 기반 UART 수신 경로를 완성한 뒤 최종적으로 **RS485 기반 Modbus RTU 실통신**을 확인했다.
+이를 해결하기 위해 Modbus RTU 통신 포트를 **USART1(PA9/PA10)** 으로 재배치하였으며 
+이 과정에서 `USART1_IRQHandler()`와 `USART1_IRQn` NVIC enable 설정이 필요했고, 인터럽트 기반 UART 수신 경로를 완성한 뒤 
+최종적으로 **RS485 기반 Modbus RTU 실통신**을 확인했습니다.
 
 ### Current Modbus Scope
 
-현재 Modbus 구현 범위는 다음과 같다.
+현재 Modbus 구현 범위는 다음과 같습니다.
 
 - Protocol: **Modbus RTU Slave**
 - Physical layer: **RS485**
 - Supported function:
   - `0x03` Read Holding Registers
 
-초기 구현에서는 읽기 경로를 안정적으로 검증하는 데 집중하기 위해, holding register 읽기와 register map 검증을 우선 범위로 잡았다.
+초기 구현에서는 읽기 경로를 안정적으로 검증하는 데 집중하기 위해, holding register 읽기와 register map 검증을 우선 범위로 잡았습니다.
 
 ### Holding Register Map
 
@@ -297,17 +298,17 @@ NUCLEO-F411RE 보드에서는 기본 **USART2(PA2/PA3)** 가 **ST-LINK VCP** 경
 
 ### Notes on Data Representation
 
-Modbus register 인터페이스를 단순하고 예측 가능하게 유지하기 위해, 내부 float 센서값은 register에 올릴 때 **fixed-point 정수값**으로 변환했다.
+Modbus register 인터페이스를 단순하고 예측 가능하게 유지하기 위해, 내부 float 센서값은 register에 올릴 때 **fixed-point 정수값**으로 변환했습니다.
 
 - Temperature → `x100`
 - Humidity → `x100`
 - Pressure → `x10`
 
-이 방식은 wire format을 단순하게 유지하면서도, 외부 모니터링 툴에서 충분한 해상도로 값을 읽을 수 있게 해준다.
+이 방식은 wire format을 단순하게 유지하면서도, 외부 모니터링 툴에서 충분한 해상도로 값을 읽을 수 있게 해줍니다.
 
 ### Verification
 
-구현된 Modbus RTU Slave는 **Modbus Poll**과 **RS485 연결**을 이용해 검증했다.
+구현된 Modbus RTU Slave는 **Modbus Poll**과 **RS485 연결**을 이용해 검증했습니다.
 
 - Slave ID: `1`
 - Mode: `RTU`
@@ -321,7 +322,7 @@ Modbus register 인터페이스를 단순하고 예측 가능하게 유지하기
 
 ### Design Takeaway
 
-이번 확장은 단순히 프로토콜을 추가한 작업이 아니라, 실제 하드웨어 환경에서 다음 요소들을 함께 검증하는 과정이었다.
+이번 확장은 단순히 프로토콜을 추가한 작업이 아니라, 실제 하드웨어 환경에서 다음 요소들을 함께 검증하는 과정이었습니다.
 
 - STM32 USART peripheral 설정
 - interrupt handler / NVIC 설정
@@ -329,7 +330,7 @@ Modbus register 인터페이스를 단순하고 예측 가능하게 유지하기
 - PC master(Modbus Poll)와의 상호운용성 검증
 - 보드 라우팅 제약에 따른 UART 경로 재배치
 
-그 결과, 센서 데이터를 사람이 읽는 CLI 출력뿐 아니라 **산업용 표준 프로토콜 형태로 외부 장치가 직접 읽을 수 있는 구조**로 확장할 수 있었다.
+그 결과, 센서 데이터를 사람이 읽는 CLI 출력뿐 아니라 **산업용 표준 프로토콜 형태로 외부 장치가 직접 읽을 수 있는 구조**로 확장할 수 있었습니다.
 
 ## Current Limitations
 
