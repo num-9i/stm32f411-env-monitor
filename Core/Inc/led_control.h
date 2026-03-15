@@ -13,4 +13,6 @@ typedef enum
 void LED_Update_Handler(void);
 void LED_Auto_Control(float humidity);
 
+void LED_ResetToDefault(void);
+
 #endif /* INC_LED_CONTROL_H_ */

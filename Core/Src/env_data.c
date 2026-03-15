@@ -83,3 +83,57 @@ int32_t Env_Get_Press_Fixed(void)
 {
     return (int32_t)lroundf(g_press);
 }
+
+
+
+
+/**
+ * @brief Return temperature scaled as signed int16_t (degC x100) for Modbus register mapping.
+ */
+int16_t Env_Get_Temp_X100(void)
+{
+    int32_t t_val = (int32_t)roundf(g_temp * 100.0f);
+
+    if (t_val > 32767)
+    {
+        t_val = 32767;
+    }
+    else if (t_val < -32768)
+    {
+        t_val = -32768;
+    }
+
+    return (int16_t)t_val;
+}
+
+uint16_t Env_Get_Humi_X100(void)
+{
+    int32_t h_val = (int32_t)roundf(g_humi * 100.0f);
+
+    if (h_val < 0)
+    {
+        h_val = 0;
+    }
+    else if (h_val > 10000)
+    {
+        h_val = 10000;
+    }
+
+    return (uint16_t)h_val;
+}
+
+uint16_t Env_Get_Press_X10(void)
+{
+    int32_t p_val = (int32_t)lroundf(g_press * 10.0f);
+
+    if (p_val < 0)
+    {
+        p_val = 0;
+    }
+    else if (p_val > 65535)
+    {
+        p_val = 65535;
+    }
+
+    return (uint16_t)p_val;
+}

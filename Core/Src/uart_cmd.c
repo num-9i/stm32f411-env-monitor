@@ -22,11 +22,11 @@
 #include "aht20.h"
 
 extern LED_Config_t g_led;
-extern const LED_Config_t default_led_config;
 
-extern UART_HandleTypeDef huart2;
+
+
 extern UART_Handler g_uart2;
-extern uint8_t rx_data;
+
 extern TIM_HandleTypeDef htim2;
 
 extern int auto_report_mode;
@@ -159,7 +159,7 @@ static void cmd_RESET(char *arg)
 {
     (void)arg;
 
-    g_led = default_led_config;
+    LED_ResetToDefault();
     UART_LOG("System Factory Reset Complete!");
 }
 
@@ -405,39 +405,4 @@ void UART_ProcessCommand(UART_Handler *hUart)
     printf(">> Ready.\r\n");
 }
 
-/* -------------------------------------------------------------------------- */
-/* UART RX interrupt callback                                                 */
-/* -------------------------------------------------------------------------- */
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-    if (huart->Instance == USART2)
-    {
-        if ((rx_data == '\r') || (rx_data == '\n'))
-        {
-            if (g_uart2.rx_idx > 0)
-            {
-                g_uart2.rx_buffer[g_uart2.rx_idx] = '\0';
-                g_uart2.flags.bits.is_ready = 1;
-                g_uart2.state = SYS_COMMAND_PENDING;
-            }
-        }
-        else if ((rx_data == 0x08) || (rx_data == 127))
-        {
-            if (g_uart2.rx_idx > 0)
-            {
-                g_uart2.rx_idx--;
-                HAL_UART_Transmit(huart, (uint8_t *)"\b \b", 3, 10);
-            }
-        }
-        else
-        {
-            if (g_uart2.rx_idx < 63)
-            {
-                g_uart2.rx_buffer[g_uart2.rx_idx++] = rx_data;
-            }
-        }
-
-        HAL_UART_Receive_IT(huart, &rx_data, 1);
-    }
-}

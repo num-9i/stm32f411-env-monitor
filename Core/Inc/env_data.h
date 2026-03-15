@@ -18,8 +18,16 @@ extern int32_t  g_raw_adc_T;
 extern int32_t  g_raw_adc_P;
 extern uint32_t g_raw_humi;
 
+
 Env_Fixed_t Env_Get_Temp_Fixed(void);
 Env_Fixed_t Env_Get_Humi_Fixed(void);
 int32_t Env_Get_Press_Fixed(void);
+
+
+
+int16_t Env_Get_Temp_X100(void);
+uint16_t Env_Get_Humi_X100(void);
+uint16_t Env_Get_Press_X10(void);
+
 
 #endif /* INC_ENV_DATA_H_ */

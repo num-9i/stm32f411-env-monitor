@@ -13,6 +13,19 @@
 
 extern TIM_HandleTypeDef htim2;
 extern LED_Config_t g_led;
+extern const LED_Config_t default_led_config;
+
+
+
+void LED_ResetToDefault(void)
+{
+	g_led=default_led_config;
+}
+
+
+
+
+
 
 static void LED_Handle_Blink(void)
 {
