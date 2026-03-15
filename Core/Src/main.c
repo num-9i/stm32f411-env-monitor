@@ -3,16 +3,13 @@
  * @brief Application entry point and super-loop scheduler.
  *
  * The main loop periodically runs non-blocking sensor tasks, updates the latest
- * shared sensor values, drives humidity-based LED behavior, refreshes the OLED
- * every 10 seconds, and processes UART CLI commands.
+ * shared sensor values, drives humidity-based LED behavior, refreshes the OLED,
+ * and processes Modbus RTU requests over USART1.
  */
 
 #include "main.h"
 
-#include <math.h>
-#include <stdarg.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "aht20.h"
@@ -21,18 +18,19 @@
 #include "led_control.h"
 #include "ssd1306.h"
 #include "uart_cmd.h"
+#include "modbus_rtu.h"
 
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c1;
 TIM_HandleTypeDef htim2;
-UART_HandleTypeDef huart2;
+UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 #define OLED_REPORT_INTERVAL_MS 10000U
 
 uint32_t report_tick = 0U;
 
-uint8_t rx_data; // UART RX byte buffer for interrupt-driven input.
+uint8_t rx_data; /* CLI RX byte buffer (unused in Modbus mode). */
 
 const LED_Config_t default_led_config =
 {
@@ -56,100 +54,143 @@ LED_Config_t g_led =
     .timer_count = 1000
 };
 
-UART_Handler g_uart2;   // RX buffer, index, and state flags for CLI input.
+UART_Handler g_uart2;
 int auto_report_mode = 0;
+
+#define UART_MODE_CLI     0
+#define UART_MODE_MODBUS  1
+
+#define APP_UART_MODE     UART_MODE_MODBUS
+
+uint8_t modbus_rx_byte = 0U;
+uint8_t modbus_rx_buf[MODBUS_MIN_REQUEST_SIZE];
+uint8_t modbus_tx_buf[MODBUS_MAX_TX_SIZE];
+
+volatile uint16_t modbus_rx_idx = 0U;
+volatile uint8_t modbus_request_ready = 0U;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_USART2_UART_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_I2C1_Init(void);
+static void MX_USART1_UART_Init(void);
 
 /* USER CODE BEGIN 0 */
 
-// Redirect printf() output to USART2 VCP.
+/* Disable printf() output to avoid contaminating the Modbus line. */
 int _write(int file, char *ptr, int len)
 {
     (void)file;
-    HAL_UART_Transmit(&huart2, (uint8_t *)ptr, len, 0xFFFF);
+    (void)ptr;
     return len;
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if (huart->Instance != USART1)
+    {
+        return;
+    }
+
+#if (APP_UART_MODE == UART_MODE_MODBUS)
+    if (modbus_request_ready == 0U)
+    {
+        if (modbus_rx_idx < MODBUS_MIN_REQUEST_SIZE)
+        {
+            modbus_rx_buf[modbus_rx_idx++] = modbus_rx_byte;
+        }
+
+        if (modbus_rx_idx >= MODBUS_MIN_REQUEST_SIZE)
+        {
+            modbus_request_ready = 1U;
+            modbus_rx_idx = 0U;
+        }
+    }
+
+    HAL_UART_Receive_IT(huart, &modbus_rx_byte, 1);
+#else
+    HAL_UART_Receive_IT(huart, &rx_data, 1);
+#endif
 }
 
 /* USER CODE END 0 */
 
-/**
- * @brief  The application entry point.
- * @retval int
- */
 int main(void)
 {
     HAL_Init();
     SystemClock_Config();
 
     MX_GPIO_Init();
-    MX_USART2_UART_Init();
     MX_TIM2_Init();
     MX_I2C1_Init();
+    MX_USART1_UART_Init();
 
-    /* USER CODE BEGIN 2 */
     memset(&g_uart2, 0, sizeof(UART_Handler));
-    HAL_UART_Receive_IT(&huart2, &rx_data, 1);
 
-    printf("\r\n[System] System Started! Type Command and Enter.\r\n");
+#if (APP_UART_MODE == UART_MODE_MODBUS)
+    memset(modbus_rx_buf, 0, sizeof(modbus_rx_buf));
+    memset(modbus_tx_buf, 0, sizeof(modbus_tx_buf));
+    modbus_rx_idx = 0U;
+    modbus_request_ready = 0U;
+
+    HAL_UART_Receive_IT(&huart1, &modbus_rx_byte, 1);
+#else
+    HAL_UART_Receive_IT(&huart1, &rx_data, 1);
+#endif
 
     HAL_TIM_Base_Start_IT(&htim2);
     HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
 
     report_tick = HAL_GetTick();
 
+#if (APP_UART_MODE == UART_MODE_CLI)
     UART_LOG("Scanning I2C bus...");
+#endif
 
-    // Scan the I2C bus once at startup to confirm connected devices.
     for (uint8_t i = 1; i < 128; i++)
     {
         HAL_StatusTypeDef result =
             HAL_I2C_IsDeviceReady(&hi2c1, (uint16_t)(i << 1), 3, 5);
 
-        // HAL expects the 8-bit address form, so the 7-bit device address is shifted left by 1.
+#if (APP_UART_MODE == UART_MODE_CLI)
         if (result == HAL_OK)
         {
             UART_LOG("Found device at: 0x%02X", i);
         }
+#else
+        (void)result;
+#endif
     }
 
+#if (APP_UART_MODE == UART_MODE_CLI)
     UART_LOG("Scan Finished.");
+#endif
 
     OLED_Init();
     OLED_Clear();
     OLED_SetCursor(0, 0);
     OLED_Printf("READY");
 
-    // Initialize sensors after OLED setup so startup status is visible during bring-up.
     BMP280_Init();
     AHT20_Init();
-    /* USER CODE END 2 */
 
     while (1)
     {
         uint32_t now = HAL_GetTick();
 
-        // 1) Run sensor state machines every loop without blocking the main loop.
         BMP280_Task();
         AHT20_Task();
 
-        // 2) Copy the latest driver outputs into shared application-level values.
         BMP280_Get_Data(&g_temp, &g_press);
         AHT20_Get_Data(NULL, &g_humi);
 
         BMP280_Get_RawAdc(&g_raw_adc_T, &g_raw_adc_P);
         g_raw_humi = AHT20_Get_RawHumi();
 
-        // 3) Apply automatic LED behavior using the latest humidity value.
         LED_Auto_Control(g_humi);
 
-        // 4) Refresh OLED and optional auto report every 10 seconds.
         if ((now - report_tick) >= OLED_REPORT_INTERVAL_MS)
         {
             char buf[32];
@@ -174,6 +215,7 @@ int main(void)
             OLED_SetCursor(4, 0);
             OLED_Printf(buf);
 
+#if (APP_UART_MODE == UART_MODE_CLI)
             UART_LOG("OLED Updated with Sensor Data!");
 
             if (auto_report_mode)
@@ -183,17 +225,69 @@ int main(void)
                          h.whole, h.frac,
                          (long)p);
             }
+#endif
         }
 
-        // 5) Process UART CLI commands.
+
+#if (APP_UART_MODE == UART_MODE_MODBUS)
+        if (modbus_request_ready)
+        {
+            Modbus_Request_t request;
+            Modbus_Status_t status;
+            uint16_t tx_len = 0U;
+
+            status = Modbus_ParseRequest(modbus_rx_buf,
+                                         MODBUS_MIN_REQUEST_SIZE,
+                                         &request);
+
+            if (status == MODBUS_OK)
+            {
+                tx_len = Modbus_BuildReadHoldingResponse(&request,
+                                                         modbus_tx_buf,
+                                                         sizeof(modbus_tx_buf));
+            }
+            else if (status == MODBUS_ERR_FUNC)
+            {
+                tx_len = Modbus_BuildExceptionResponse(MODBUS_SLAVE_ADDR,
+                                                       MODBUS_FUNC_READ_HOLDING_REGS,
+                                                       MODBUS_EXCEPTION_ILLEGAL_FUNC,
+                                                       modbus_tx_buf,
+                                                       sizeof(modbus_tx_buf));
+            }
+            else if (status == MODBUS_ERR_ADDR)
+            {
+                tx_len = Modbus_BuildExceptionResponse(MODBUS_SLAVE_ADDR,
+                                                       MODBUS_FUNC_READ_HOLDING_REGS,
+                                                       MODBUS_EXCEPTION_ILLEGAL_ADDR,
+                                                       modbus_tx_buf,
+                                                       sizeof(modbus_tx_buf));
+            }
+            else if (status == MODBUS_ERR_VALUE)
+            {
+                tx_len = Modbus_BuildExceptionResponse(MODBUS_SLAVE_ADDR,
+                                                       MODBUS_FUNC_READ_HOLDING_REGS,
+                                                       MODBUS_EXCEPTION_ILLEGAL_VALUE,
+                                                       modbus_tx_buf,
+                                                       sizeof(modbus_tx_buf));
+            }
+            else
+            {
+                tx_len = 0U;
+            }
+
+            if (tx_len > 0U)
+            {
+                HAL_UART_Transmit(&huart1, modbus_tx_buf, tx_len, 100);
+            }
+
+            memset(modbus_rx_buf, 0, sizeof(modbus_rx_buf));
+            modbus_request_ready = 0U;
+        }
+#else
         UART_ProcessCommand(&g_uart2);
+#endif
     }
 }
-
-/**
- * @brief System Clock Configuration
- * @retval None
- */
 void SystemClock_Config(void)
 {
     RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -232,11 +326,6 @@ void SystemClock_Config(void)
     }
 }
 
-/**
- * @brief I2C1 Initialization Function
- * @param None
- * @retval None
- */
 static void MX_I2C1_Init(void)
 {
     hi2c1.Instance = I2C1;
@@ -255,11 +344,6 @@ static void MX_I2C1_Init(void)
     }
 }
 
-/**
- * @brief TIM2 Initialization Function
- * @param None
- * @retval None
- */
 static void MX_TIM2_Init(void)
 {
     TIM_ClockConfigTypeDef sClockSourceConfig = {0};
@@ -309,33 +393,23 @@ static void MX_TIM2_Init(void)
     HAL_TIM_MspPostInit(&htim2);
 }
 
-/**
- * @brief USART2 Initialization Function
- * @param None
- * @retval None
- */
-static void MX_USART2_UART_Init(void)
+static void MX_USART1_UART_Init(void)
 {
-    huart2.Instance = USART2;
-    huart2.Init.BaudRate = 115200;
-    huart2.Init.WordLength = UART_WORDLENGTH_8B;
-    huart2.Init.StopBits = UART_STOPBITS_1;
-    huart2.Init.Parity = UART_PARITY_NONE;
-    huart2.Init.Mode = UART_MODE_TX_RX;
-    huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+    huart1.Instance = USART1;
+    huart1.Init.BaudRate = 9600;
+    huart1.Init.WordLength = UART_WORDLENGTH_8B;
+    huart1.Init.StopBits = UART_STOPBITS_1;
+    huart1.Init.Parity = UART_PARITY_NONE;
+    huart1.Init.Mode = UART_MODE_TX_RX;
+    huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+    huart1.Init.OverSampling = UART_OVERSAMPLING_16;
 
-    if (HAL_UART_Init(&huart2) != HAL_OK)
+    if (HAL_UART_Init(&huart1) != HAL_OK)
     {
         Error_Handler();
     }
 }
 
-/**
- * @brief GPIO Initialization Function
- * @param None
- * @retval None
- */
 static void MX_GPIO_Init(void)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -349,25 +423,26 @@ static void MX_GPIO_Init(void)
     GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+
+    /* Configure GPIO pins : PA9 (USART1_TX), PA10 (USART1_RX) */
+    GPIO_InitStruct.Pin = GPIO_PIN_9 | GPIO_PIN_10;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF7_USART1;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 }
 
 /* USER CODE BEGIN 4 */
-
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if (htim->Instance == TIM2)
     {
-        // 1 ms timer tick used for LED blink / breath state updates.
         LED_Update_Handler();
     }
 }
-
 /* USER CODE END 4 */
 
-/**
- * @brief  This function is executed in case of error occurrence.
- * @retval None
- */
 void Error_Handler(void)
 {
     __disable_irq();
@@ -382,4 +457,4 @@ void assert_failed(uint8_t *file, uint32_t line)
     (void)file;
     (void)line;
 }
-#endif /* USE_FULL_ASSERT */
+#endif
