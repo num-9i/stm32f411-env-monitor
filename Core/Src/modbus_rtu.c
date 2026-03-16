@@ -195,9 +195,20 @@ static uint16_t Modbus_BuildStatusFlags(void)
 {
     uint16_t flags = 0U;
 
-    flags |= MB_STATUS_TEMP_VALID;
-    flags |= MB_STATUS_HUMI_VALID;
-    flags |= MB_STATUS_PRESS_VALID;
+    if (g_temp_valid)
+    {
+        flags |= MB_STATUS_TEMP_VALID;
+    }
+
+    if (g_humi_valid)
+    {
+        flags |= MB_STATUS_HUMI_VALID;
+    }
+
+    if (g_press_valid)
+    {
+        flags |= MB_STATUS_PRESS_VALID;
+    }
 
     if (auto_report_mode)
     {

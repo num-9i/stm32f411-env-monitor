@@ -68,6 +68,13 @@ uint8_t modbus_tx_buf[MODBUS_MAX_TX_SIZE];
 
 volatile uint16_t modbus_rx_idx = 0U;
 volatile uint8_t modbus_request_ready = 0U;
+
+
+volatile uint8_t g_temp_valid = 0U;
+volatile uint8_t g_humi_valid = 0U;
+volatile uint8_t g_press_valid = 0U;
+
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/

@@ -142,7 +142,6 @@ void AHT20_Task(void)
                     ((uint32_t)data[2] << 4)  |
                     (((uint32_t)data[3] >> 4) & 0x0FU);
 
-                // Temperature is decoded for completeness, although humidity is the primary output here.
                 uint32_t raw_temp =
                     (((uint32_t)data[3] & 0x0FU) << 16) |
                     ((uint32_t)data[4] << 8) |
@@ -152,9 +151,10 @@ void AHT20_Task(void)
 
                 if (raw_humi != 0U)
                 {
-                    // Cache raw humidity for DEBUG output and verification.
                     aht_last_raw_humi = raw_humi;
                     aht_last_humi = (float)raw_humi * 100.0f / 1048576.0f;
+
+                    g_humi_valid = 1U;
                 }
                 else
                 {

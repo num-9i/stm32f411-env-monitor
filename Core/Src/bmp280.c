@@ -210,7 +210,6 @@ void BMP280_Task(void)
 
     case BMP_DATA_READY:
     {
-        // Reject invalid state entry if no trigger was issued.
         if (!bmp_triggered)
         {
             bmp_state = BMP_IDLE;
@@ -222,12 +221,14 @@ void BMP280_Task(void)
             adc_P = (int32_t)((data[0] << 12) | (data[1] << 4) | (data[2] >> 4));
             adc_T = (int32_t)((data[3] << 12) | (data[4] << 4) | (data[5] >> 4));
 
-            // Cache raw ADC values for DEBUG output and verification.
             bmp_last_raw_P = adc_P;
             bmp_last_raw_T = adc_T;
 
             bmp_last_temp  = BMP280_Compensate_T(adc_T);
             bmp_last_press = BMP280_Compensate_P(adc_P);
+
+            g_temp_valid = 1U;
+            g_press_valid = 1U;
         }
         else
         {

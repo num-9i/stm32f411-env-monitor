@@ -52,6 +52,11 @@ typedef struct
 /* USER CODE BEGIN EC */
 extern LED_Config_t g_led;
 extern const LED_Config_t default_led_config;
+
+extern volatile uint8_t g_temp_valid;
+extern volatile uint8_t g_humi_valid;
+extern volatile uint8_t g_press_valid;
+
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/
