@@ -296,6 +296,8 @@ NUCLEO-F411RE 보드에서는 기본 **USART2(PA2/PA3)** 가 **ST-LINK VCP** 경
 | `0x0006` | Reserved | 추후 확장용 예약 영역 | - |
 | `0x0007` | Reserved | 추후 확장용 예약 영역 | - |
 
+Status Flags의 valid 비트는 초기화 시 기본적으로 set되지 않으며, 각 센서 데이터가 실제로 한 번 이상 정상 측정된 이후에만 set되도록 구성했습니다. 이를 통해 전원 인가 직후의 미측정 상태와 정상 측정 완료 후의 동작 상태를 구분할 수 있도록 했습니다.
+
 ### Notes on Data Representation
 
 Modbus register 인터페이스를 단순하고 예측 가능하게 유지하기 위해, 내부 float 센서값은 register에 올릴 때 **fixed-point 정수값**으로 변환했습니다.
