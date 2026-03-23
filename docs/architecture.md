@@ -9,6 +9,7 @@ flowchart LR
   subgraph App[Application Layer]
     MAIN[main.c\nsuper-loop scheduler]
     CLI[uart_cmd.c\nCLI command parser]
+    MODBUS[modbus_rtu.c\nRTU parse / response build]
     OLED[ssd1306.c\nOLED Update every 10s]
     LED[led_control.c\nLED_Update_Handler + LED_Auto_Control]
     ENV[env_data.c\nformatting + fixed-point conversion]
@@ -21,7 +22,8 @@ flowchart LR
 
   subgraph HAL[HAL / Peripherals]
     I2C[I2C1]
-    UART[USART2 VCP RX interrupt]
+    UART2[USART2 VCP RX interrupt\nCLI mode]
+    UART1[USART1 RX interrupt\nModbus RTU / RS485]
     TIM[TIM2 PWM / 1ms callback]
     TICK[HAL_GetTick]
   end
@@ -29,6 +31,7 @@ flowchart LR
   MAIN --> BMP
   MAIN --> AHT
   MAIN --> CLI
+  MAIN --> MODBUS
   MAIN --> OLED
   MAIN --> LED
 
@@ -38,12 +41,14 @@ flowchart LR
   ENV --> CLI
   ENV --> OLED
   ENV --> LED
+  ENV --> MODBUS
 
   BMP <--> I2C
   AHT <--> I2C
   OLED <--> I2C
 
-  CLI <--> UART
+  CLI <--> UART2
+  MODBUS <--> UART1
   LED <--> TIM
   MAIN <--> TICK
   BMP <--> TICK
