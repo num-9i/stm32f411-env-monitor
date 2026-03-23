@@ -26,7 +26,7 @@ flowchart LR
 
   subgraph HAL[HAL / Peripherals]
     I2C[I2C1]
-    UART2[USART2 VCP RX interrupt\nCLI mode]
+    UART1[USART1 VCP RX interrupt\nCLI mode]
     UART1[USART1 RX interrupt\nModbus RTU / RS485]
     TIM[TIM2 PWM / 1ms callback]
     TICK[HAL_GetTick]
@@ -51,7 +51,7 @@ flowchart LR
   AHT <--> I2C
   OLED <--> I2C
 
-  CLI <--> UART2
+  CLI <--> UART1
   MODBUS <--> UART1
   LED <--> TIM
   MAIN <--> TICK
