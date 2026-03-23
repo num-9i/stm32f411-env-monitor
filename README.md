@@ -83,6 +83,9 @@ UART CLI를 통해 측정값, 센서 상태, 디버그 정보, 주기 보고 기
   - USB-to-RS485 adapter
   - Modbus Poll for validation
 
+![Prototype setup for Modbus RTU / RS485 validation](docs/imgs/prototype_setup.jpg)
+*STM32F411RE, BMP280, AHT20, SSD1306 OLED, TTL-to-RS485 transceiver, USB-to-RS485 adapter, logic analyzer를 함께 연결한 실통신 검증용 프로토타입 셋업입니다.*
+
 ## System Overview
 
 부팅 후 시스템은 UART 수신 인터럽트, TIM2 PWM, I2C1을 초기화하고 I2C bus scan을 수행한 뒤 OLED와 센서를 초기화합니다. 이후 main loop에서는 두 센서 Task를 매 루프 호출하고, 드라이버 내부 최신 측정값을 `g_temp`, `g_humi`, `g_press` 및 raw 데이터 전역값으로 반영합니다. LED 자동 제어는 최신 습도값을 사용하고, OLED 표시 및 UART auto report는 10초 주기로만 수행됩니다. UART 명령 처리는 루프 말단에서 수행되며, Modbus RTU 모드에서는 holding register 요청을 파싱하고 응답 프레임을 생성합니다.
@@ -348,24 +351,25 @@ Modbus register 인터페이스를 단순하고 예측 가능하게 유지하기
 - UART: `USART1`
 - Physical layer: `TTL-to-RS485 transceiver + USB-RS485 adapter`
 
-![Prototype setup for Modbus RTU / RS485 validation](docs/imgs/prototype_setup.jpg)
 
-*STM32F411RE, BMP280, AHT20, SSD1306 OLED, TTL-to-RS485 transceiver, USB-to-RS485 adapter, logic analyzer를 함께 연결한 실통신 검증용 프로토타입 셋업입니다.*
+#### 1. 주기 동작 검증 (Periodic Communication Check)
+Logic analyzer를 이용해 1000 ms 주기로 master request와 slave response가 반복적으로 발생하는 것을 확인한 화면입니다. 이를 통해 연속 동작 중에도 request / response 흐름이 주기적으로 수행되는지 확인했습니다.
 
 ![Periodic request/response capture](docs/imgs/modbus_uart_periodic_capture.png)
 
-*Logic analyzer를 이용해 1000 ms 주기로 master request와 slave response가 반복적으로 발생하는 것을 확인한 화면입니다. 이를 통해 연속 동작 중에도 request / response 흐름이 주기적으로 수행되는지 확인했습니다.*
 
+#### 2. 프레임 상세 검증 (Frame-Level UART Decode)
+단일 transaction을 확대하여 UART raw byte 기준으로 request 프레임과 response 프레임을 직접 확인한 화면입니다. 0x03 Read Holding Registers 요청에 대해 slave address, function code, data field, CRC 바이트 구성을 바이트 단위로 검토했습니다.
 ![Frame-level UART decode](docs/imgs/modbus_uart_frame_decode.png)
 
-*단일 transaction을 확대하여 UART raw byte 기준으로 request 프레임과 response 프레임을 직접 확인한 화면입니다. `0x03 Read Holding Registers` 요청에 대해 slave address, function code, data field, CRC 바이트 구성을 바이트 단위로 검토했습니다.*
 
+#### 3. Master 툴 연동 검증 (Master-Side Register Verification)
+Modbus Poll을 이용해 holding register를 주기적으로 읽고, 온도(x100), 습도(x100), 상태값을 실시간으로 확인한 화면입니다.
+
+이 검증 과정을 통해 단순히 Modbus Poll에서 값이 읽히는 것만 확인한 것이 아니라, 실제 하드웨어 셋업, UART request / response 파형, register 응답 구조까지 종합적으로 점검했습니다.
 ![Modbus Poll real-time chart](docs/imgs/modbus_poll_realtime_chart.png)
 
-*Modbus Poll을 이용해 holding register를 주기적으로 읽고, 온도(`x100`), 습도(`x100`), 상태값을 실시간으로 확인한 화면입니다.*
 
-이 검증 과정을 통해 단순히 Modbus Poll에서 값이 읽히는 것만 확인한 것이 아니라,  
-실제 하드웨어 셋업, UART request / response 파형, register 응답 구조까지 함께 점검했습니다.
 
 ### Design Takeaway
 
