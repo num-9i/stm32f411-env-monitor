@@ -1,5 +1,15 @@
 # STM32F411RE Environmental Monitoring System
 
+
+## Quick Summary
+- STM32F411RE 기반 환경 모니터링 펌웨어 프로젝트
+- BMP280, AHT20, SSD1306 OLED, UART CLI를 통합
+- HAL_GetTick() 기반 non-blocking 상태머신으로 센서 측정 경로 재구성
+- env_data 레이어에서 반올림, clamp, fixed-point 변환 처리
+- Modbus RTU Slave 확장 및 RS485 실통신 검증 완료
+- super-loop 기반 구조에서 측정, 표시, CLI, 통신이 병행 동작하도록 설계
+
+
 STM32F411RE (NUCLEO-F411RE) 기반 환경 모니터링 펌웨어 프로젝트입니다.  
 BMP280(온도/기압), AHT20(습도), SSD1306 OLED, UART CLI를 사용해 센서 데이터를 수집하고 표시하며, 현재 동작 상태를 확인할 수 있도록 구성했습니다.
 
