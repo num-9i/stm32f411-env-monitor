@@ -445,7 +445,7 @@ Modbus Poll을 이용해 holding register를 주기적으로 읽고, 온도(x100
 *원인별 에러 카운터 도입 후 `SENSSTAT`를 통해 오류를 세부 항목으로 분해해 확인했고, AHT20 오류가 주로 `busy timeout` 계열에 집중된다는 점을 확인했습니다. 이후 timeout 정책을 200ms에서 300ms로 조정해 오류 발생 빈도를 줄였으며, `SNAP`과 Modbus Poll을 함께 사용해 내부 상태와 외부 register 반영 결과의 일관성도 추가 검증했습니다.*
 
 ![SNAP and Modbus Poll concurrent verification](docs/imgs/snap_modbus_concurrent_check.png)
-*`SNAP` 명령과 Modbus Poll을 동시에 사용한 검증 화면. CLI 내부 상태(raw 값, 가공 값, valid flag, error count)와 Modbus holding register 값이 동시에 확인되며, 센서 오류 정보가 `STATUS_FLAGS`, `BMP280_ERR_COUNT`, `AHT20_ERR_COUNT` 레지스터에도 일관되게 반영되는지 검증했다.*
+*`SNAP` 명령과 Modbus Poll을 동시에 사용한 검증 화면. CLI 내부 상태(raw 값, 가공 값, valid flag, error count)와 Modbus holding register 값이 동시에 확인되며, 센서 오류 정보가 `STATUS_FLAGS`, `BMP280_ERR_COUNT`, `AHT20_ERR_COUNT` 레지스터에도 일관되게 반영되는지 검증했습니다.*
 
 ### Design Takeaway
 
