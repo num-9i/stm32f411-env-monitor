@@ -48,7 +48,7 @@ static BMP280_State_t bmp_state = BMP_IDLE;
 static uint32_t bmp_measure_start_tick = 0U;
 static uint32_t last_bmp_read_time     = 0U;
 static uint32_t last_poll_tick         = 0U;
-static uint32_t bmp_error_count        = 0U;
+static BMP280_ErrorStats_t bmp_err = {0};
 
 static float   bmp_last_temp  = 0.0f;
 static float   bmp_last_press = 0.0f;
@@ -62,7 +62,8 @@ static void BMP280_Read_Calibration(void)
     // Calibration coefficients are stored in 0x88~0x9F (24 bytes).
     if (HAL_I2C_Mem_Read(&hi2c1, BMP280_ADDR, 0x88, 1, data, 24, 100) != HAL_OK)
     {
-        bmp_error_count++;
+        bmp_err.total++;
+        bmp_err.calib_read_fail++;
         return;
     }
 
@@ -89,18 +90,24 @@ void BMP280_Init(void)
 
     if (HAL_I2C_Mem_Read(&hi2c1, BMP280_ADDR, 0xD0, 1, &id, 1, 100) != HAL_OK)
     {
+    	bmp_err.total++;
+    	bmp_err.id_read_fail++;
         UART_LOG("BMP280 ID read fail");
         return;
     }
 
     if (id != 0x58)
     {
+    	bmp_err.total++;
+    	bmp_err.wrong_id++;
         UART_LOG("BMP280 wrong ID: 0x%02X", id);
         return;
     }
 
     if (HAL_I2C_Mem_Write(&hi2c1, BMP280_ADDR, 0xE0, 1, &reset, 1, 100) != HAL_OK)
     {
+    	bmp_err.total++;
+    	bmp_err.reset_write_fail++;
         UART_LOG("BMP280 reset write fail");
         return;
     }
@@ -110,6 +117,8 @@ void BMP280_Init(void)
 
     if (HAL_I2C_Mem_Write(&hi2c1, BMP280_ADDR, 0xF5, 1, &config, 1, 100) != HAL_OK)
     {
+    	bmp_err.total++;
+    	bmp_err.config_write_fail++;
         UART_LOG("BMP280 config write fail");
         return;
     }
@@ -149,7 +158,9 @@ void BMP280_Task(void)
             }
             else
             {
-                bmp_error_count++;
+                bmp_err.total++;
+                bmp_err.trigger_fail++;
+
                 bmp_triggered = 0U;
 
                 // Keep the 1-second schedule even on trigger failure to avoid retry spamming.
@@ -180,7 +191,8 @@ void BMP280_Task(void)
 
         if ((now - bmp_measure_start_tick) > BMP280_MEAS_TIMEOUT_MS)
         {
-            bmp_error_count++;
+            bmp_err.total++;
+            bmp_err.busy_timeout++;
             bmp_triggered = 0U;
             bmp_state = BMP_IDLE;
             last_bmp_read_time = now;
@@ -198,7 +210,8 @@ void BMP280_Task(void)
         }
         else
         {
-            bmp_error_count++;
+            bmp_err.total++;
+            bmp_err.status_read_fail++;
             bmp_state = BMP_IDLE;
             bmp_triggered = 0U;
             last_bmp_read_time = now;
@@ -232,7 +245,8 @@ void BMP280_Task(void)
         }
         else
         {
-            bmp_error_count++;
+            bmp_err.total++;
+            bmp_err.data_read_fail++;
         }
 
         last_bmp_read_time = now;
@@ -324,5 +338,10 @@ void BMP280_Get_RawAdc(int32_t *adc_T, int32_t *adc_P)
 
 uint32_t BMP280_Get_ErrorCount(void)
 {
-    return bmp_error_count;
+    return bmp_err.total;
+}
+
+const BMP280_ErrorStats_t *BMP280_Get_ErrorStats(void)
+{
+	return &bmp_err;
 }

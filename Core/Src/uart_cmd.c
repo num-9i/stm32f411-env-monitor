@@ -81,10 +81,29 @@ static void cmd_REPORT(char *arg)
 
 static void cmd_SENSSTAT(char *arg)
 {
-    (void)arg;
+	(void)arg;
 
-    UART_LOG("BMP280 I2C Errors: %lu", BMP280_Get_ErrorCount());
-    UART_LOG("AHT20  I2C Errors: %lu", AHT20_Get_ErrorCount());
+	    const BMP280_ErrorStats_t *bmp = BMP280_Get_ErrorStats();
+	    const AHT20_ErrorStats_t *aht = AHT20_Get_ErrorStats();
+
+	    UART_LOG("BMP280 Error Total        : %lu", bmp->total);
+	    UART_LOG(" - ID read fail           : %lu", bmp->id_read_fail);
+	    UART_LOG(" - Wrong ID               : %lu", bmp->wrong_id);
+	    UART_LOG(" - Reset write fail       : %lu", bmp->reset_write_fail);
+	    UART_LOG(" - Config write fail      : %lu", bmp->config_write_fail);
+	    UART_LOG(" - Calib read fail        : %lu", bmp->calib_read_fail);
+	    UART_LOG(" - Trigger fail           : %lu", bmp->trigger_fail);
+	    UART_LOG(" - Busy timeout           : %lu", bmp->busy_timeout);
+	    UART_LOG(" - Status read fail       : %lu", bmp->status_read_fail);
+	    UART_LOG(" - Data read fail         : %lu", bmp->data_read_fail);
+
+	    UART_LOG("AHT20 Error Total        : %lu", aht->total);
+	    UART_LOG(" - Init status read fail : %lu", aht->init_status_read_fail);
+	    UART_LOG(" - Init cmd fail         : %lu", aht->init_cmd_fail);
+	    UART_LOG(" - Trigger fail          : %lu", aht->trigger_fail);
+	    UART_LOG(" - Busy timeout          : %lu", aht->busy_timeout);
+	    UART_LOG(" - Data read fail        : %lu", aht->data_read_fail);
+	    UART_LOG(" - Raw zero              : %lu", aht->raw_zero);
 }
 
 static void cmd_ENV(char *arg)

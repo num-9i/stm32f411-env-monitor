@@ -11,11 +11,25 @@ typedef enum
     AHT_MEASURING
 } AHT20_State_t;
 
+typedef struct
+{
+	uint32_t total;
+	uint32_t init_status_read_fail;
+	uint32_t init_cmd_fail;
+	uint32_t trigger_fail;
+	uint32_t busy_timeout;
+	uint32_t data_read_fail;
+	uint32_t raw_zero;
+}AHT20_ErrorStats_t;
+
 void AHT20_Init(void);
 void AHT20_Task(void);
 
 void AHT20_Get_Data(float *temp, float *humi);
 uint32_t AHT20_Get_ErrorCount(void);
 uint32_t AHT20_Get_RawHumi(void);
+
+
+const AHT20_ErrorStats_t *AHT20_Get_ErrorStats(void);
 
 #endif /* INC_AHT20_H_ */

@@ -234,7 +234,7 @@ int main(void)
   HAL_UART_Receive_IT(&huart1, &modbus_rx_byte, 1);
   HAL_UART_Receive_IT(&huart2, &cli_rx_byte, 1);
 
-  UART_LOG("CLI ready on USART6.");
+  UART_LOG("CLI ready on USART2.");
 
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
