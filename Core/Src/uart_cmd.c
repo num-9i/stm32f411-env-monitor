@@ -20,19 +20,19 @@
 #include "main.h"
 #include "bmp280.h"
 #include "aht20.h"
+#include "modbus_rtu.h"
 
 extern LED_Config_t g_led;
 
 
 
-extern UART_Handler g_uart2;
+extern UART_Handler g_cli_uart;
 
 extern TIM_HandleTypeDef htim2;
 
 extern int auto_report_mode;
 
 static const CommandEntry cmd_table[];
-
 
 
 /* -------------------------------------------------------------------------- */
@@ -293,11 +293,6 @@ static void cmd_UPTIME(char *arg)
     UART_LOG("System Uptime: %lu.%03lu seconds", sec, ms);
 }
 
-static void cmd_HELLO(char *arg)
-{
-    (void)arg;
-    UART_LOG("Welcome to My STM32 System!");
-}
 
 
 
@@ -317,30 +312,66 @@ static void cmd_HELP(char *arg)
     UART_LOG("--------------------------");
 }
 
-static void cmd_DUMP(char *arg)
+static void cmd_SNAP(char *arg)
 {
-    uint8_t *p = (uint8_t *)g_uart2.rx_buffer;
     (void)arg;
 
-    UART_LOG("Memory Hex Dump Started...");
+    Env_Fixed_t t = Env_Get_Temp_Fixed();
+    Env_Fixed_t h = Env_Get_Humi_Fixed();
+    int32_t p = Env_Get_Press_Fixed();
 
-    for (int i = 0; i < 64; i++)
+    UART_LOG("=== SYSTEM SNAP START ===");
+
+    UART_LOG("[RAW]");
+    UART_LOG(" BMP280 adc_T=%ld (0x%05lX)",
+             (long)g_raw_adc_T, (unsigned long)g_raw_adc_T);
+    UART_LOG(" BMP280 adc_P=%ld (0x%05lX)",
+             (long)g_raw_adc_P, (unsigned long)g_raw_adc_P);
+    UART_LOG(" AHT20  raw_humi=%lu (0x%05lX)",
+             (unsigned long)g_raw_humi, (unsigned long)g_raw_humi);
+
+    UART_LOG("[CONVERTED]");
+    UART_LOG(" TEMP = %s%d.%02d C", t.sign_str, t.whole, t.frac);
+    UART_LOG(" HUMI = %d.%02d %%", h.whole, h.frac);
+    UART_LOG(" PRES = %ld hPa", (long)p);
+
+    UART_LOG("[VALID FLAGS]");
+    UART_LOG(" TEMP_VALID = %u", g_temp_valid);
+    UART_LOG(" HUMI_VALID = %u", g_humi_valid);
+    UART_LOG(" PRES_VALID = %u", g_press_valid);
+
+    UART_LOG("[ERROR COUNT]");
+    UART_LOG(" BMP280_ERR = %lu", BMP280_Get_ErrorCount());
+    UART_LOG(" AHT20_ERR  = %lu", AHT20_Get_ErrorCount());
+
+    UART_LOG("[LED STATUS]");
+    UART_LOG(" ENABLE = %u", g_led.enabled);
+    UART_LOG(" MODE   = %u", g_led.mode);
+    UART_LOG(" PWM    = %d", (int)htim2.Instance->CCR1);
+
+    UART_LOG("[MODBUS REG SNAPSHOT]");
+    for (uint16_t addr = MB_REG_TEMP_X100; addr <= MB_REG_RESERVED1; addr++)
     {
-        printf("[%02X]", p[i]);
+        uint16_t reg = 0U;
 
-        if ((i + 1) % 8 == 0)
+        if (Modbus_GetHoldingRegister(addr, &reg))
         {
-            printf("\r\n");
+            UART_LOG(" REG[0x%04X] = %u (0x%04X)", addr, reg, reg);
+        }
+        else
+        {
+            UART_LOG(" REG[0x%04X] = <ERR>", addr);
         }
     }
+
+    UART_LOG("=== SYSTEM SNAP END ===");
 }
 
 static const CommandEntry cmd_table[] =
 {
     {"LED",         cmd_LED},
     {"INTERVAL",       cmd_INTERVAL},
-    {"HELLO",       cmd_HELLO},
-    {"DUMP",        cmd_DUMP},
+	{"SNAP",        cmd_SNAP},
     {"HELP",        cmd_HELP},
     {"UPTIME",      cmd_UPTIME},
     {"BRIGHT",      cmd_BRIGHT},
