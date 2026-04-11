@@ -2,29 +2,20 @@
 
 ## Quick Summary
 - STM32F411RE 기반 non-blocking 환경 모니터링 펌웨어
-- BMP280, AHT20, SSD1306 OLED, UART CLI, Modbus RTU 통합
-- `HAL_GetTick()` 기반 상태머신으로 센서 측정 경로 재구성
-- `env_data` 레이어에서 반올림, clamp, fixed-point 변환 처리
-- `USART1` 기반 Modbus RTU / RS485와 `USART2(ST-LINK VCP)` 기반 CLI를 분리해 동시 운용 검증 완료
-- `SNAP`, `SENSSTAT` 명령을 통해 raw 값, 가공 값, 상태 플래그, Modbus register, 센서 원인별 에러 정보를 교차 검증 가능하도록 개선
-- AHT20 오류를 원인별로 분해한 뒤 `busy timeout` 계열로 수렴함을 확인했고, 실제 브레드보드 환경에서 timeout 정책을 200ms에서 300ms로 조정해 안정성을 개선
-- super-loop 환경에서 측정, 표시, CLI, 통신이 병행 동작하도록 설계
+- BMP280, AHT20, SSD1306 OLED, UART CLI, Modbus RTU / RS485 통합
+- `HAL_GetTick()` 기반 상태머신으로 센서 측정 경로를 재구성해 super-loop 응답성 확보
+- `USART1(Modbus RTU / RS485)`와 `USART2(ST-LINK VCP CLI)`를 분리해 외부 polling과 내부 점검의 동시 운용 검증 완료
+- `SNAP`, `SENSSTAT`, 원인별 에러 카운터를 통해 내부 상태와 외부 register 응답의 교차 검증 구조를 강화
+- 실제 브레드보드 환경에서 AHT20 timeout 계열 오류를 계측하고, timeout 정책을 200ms에서 300ms로 조정해 안정성 개선
 
 ## Overview
 STM32F411RE (NUCLEO-F411RE) 기반으로 센서 데이터 수집, OLED 표시, UART CLI, Modbus RTU 통신을 통합한 환경 모니터링 펌웨어입니다.  
-BMP280(온도/기압), AHT20(습도), SSD1306 OLED, UART CLI를 사용해 센서 데이터를 수집하고 표시하며, 현재 동작 상태를 확인할 수 있도록 구성했습니다.
+BMP280(온도/기압), AHT20(습도), SSD1306 OLED, UART CLI를 사용해 센서 데이터를 수집·표시하고, 외부 장치가 표준 산업용 프로토콜로 값을 읽을 수 있도록 Modbus RTU Slave까지 확장했습니다.
 
-이 프로젝트의 핵심은 센서 측정 경로를 `HAL_Delay()` 기반 순차 처리에서 `HAL_GetTick()` 기반 non-blocking 상태머신으로 재구성한 점입니다.  
-각 센서는 독립적인 task로 동작하며, 주기적 trigger, status polling, timeout 처리를 통해 super-loop 구조에서도 다른 기능과 병행 실행될 수 있도록 설계했습니다.
+이 프로젝트의 핵심은 단순 센서 모니터링을 넘어서, `HAL_Delay()` 기반 순차 처리 구조를 `HAL_GetTick()` 기반 non-blocking 상태머신으로 재구성하고, 실제 하드웨어 환경에서 내부 상태와 외부 응답을 함께 검증할 수 있는 구조로 발전시켰다는 점입니다.
 
-또한 raw sensor value와 사용자 표시용 값을 분리하고, `env_data` 레이어에서 반올림, 음수 처리, clamp, fixed-point 변환을 담당하도록 구성했습니다.  
-UART CLI를 통해 측정값, 센서 상태, 디버그 정보, 원인별 에러 정보를 확인할 수 있으며, OLED에는 최신 환경 정보를 주기적으로 표시합니다.
-
-추가로, 외부 장치가 표준 산업용 프로토콜로 센서 데이터를 읽을 수 있도록 **Modbus RTU Slave 통신**을 확장했고, **RS485 실통신**까지 검증했습니다.  
-최근에는 **Modbus RTU용 UART와 CLI용 UART를 분리**해 외부 register polling과 내부 점검 명령을 동시에 수행할 수 있도록 개선했고, `SNAP` 명령을 통해 raw 값, 가공 값, 상태 플래그, Modbus register snapshot을 한 번에 점검할 수 있도록 보강했습니다.
-
-또한 센서 드라이버 오류를 단순 총합이 아니라 원인별 카운터로 분리해, 실제 브레드보드 환경에서 발생하는 timeout 계열 오류를 계측하고 정책을 조정할 수 있도록 했습니다.  
-이 문서는 프로젝트의 구조, 설계 의도, 상태머신 동작, 빌드 환경, 주요 명령어, 통신 및 검증 과정을 정리한 기술 문서입니다.
+각 센서는 독립적인 task로 동작하며, 주기적 trigger, status polling, timeout 처리를 통해 super-loop 구조에서도 다른 기능과 병행 실행될 수 있도록 설계했습니다.  
+또한 `env_data` 레이어에서 raw sensor value와 사용자 표시용 값을 분리하고, CLI와 Modbus register를 통해 내부 상태·가공 값·오류 정보를 함께 점검할 수 있도록 구성했습니다.
 
 ## Documentation
 
@@ -61,16 +52,12 @@ UART CLI를 통해 측정값, 센서 상태, 디버그 정보, 원인별 에러 
 
 ## Project Highlights
 
-- STM32F411RE 기반 환경 모니터링 시스템(BMP280 / AHT20 / SSD1306)
-- `HAL_Delay()`를 메인 측정 경로에서 제거하고, `HAL_GetTick()` 기반 non-blocking state machine으로 센서 측정을 비동기화
-- UART CLI(`cmd_table`)로 `ENV`, `DEBUG`, `REPORT`, `SENSSTAT` 등 운영/디버깅 기능 제공
-- 센서 Task는 1초 주기로 측정을 시작하고, OLED 갱신 및 auto report는 10초 주기로 수행
-- 측정 완료 판정은 고정 delay 대신 센서 status bit polling으로 처리하고, polling throttle 및 software timeout을 함께 적용
-- 환경 값과 raw ADC 데이터는 `env_data` 레이어로 통합하고, 반올림 / 음수 부호 / 클램핑 등 표현 로직을 별도 분리
-- I2C error count를 노출해 센서 통신 이상 여부를 런타임에 확인 가능
-- **Modbus RTU (0x03 Read Holding Registers)** 를 **RS485** 위에 구현했고, **USART1 (PA9/PA10)** 을 사용해 Modbus Poll과의 실통신을 검증
-- `USART1`(Modbus RTU)와 `USART2(ST-LINK VCP)`(CLI)를 분리해 외부 통신과 내부 점검의 동시 운용을 검증
-- 센서 오류를 총합이 아닌 원인별 카운터로 분해해 timeout 계열 문제를 국소화하고 정책 조정에 활용
+- `HAL_Delay()` 기반 측정 경로를 `HAL_GetTick()` 기반 non-blocking 상태머신으로 전환
+- BMP280 / AHT20 / SSD1306 / UART CLI / Modbus RTU / RS485를 하나의 super-loop 구조로 통합
+- `USART1(Modbus)` / `USART2(CLI)` 분리를 통해 외부 통신과 내부 점검의 동시 운용성 확보
+- `SNAP`, `SENSSTAT`, 원인별 에러 카운터를 도입해 fault localization과 교차 검증 강화
+- Modbus Poll, logic analyzer, CLI를 함께 사용해 실제 하드웨어 환경에서 request / response / register 일관성 검증
+- AHT20 `busy timeout` 계열 오류를 원인별로 계측하고 timeout 정책 조정을 통해 안정성 개선
 
 ## Design Goals
 
@@ -326,7 +313,7 @@ STM32F411RE가 Modbus RTU Slave로 동작하도록 구성했습니다.
 ### Why USART1 was used
 
 NUCLEO-F411RE 보드에서 **USART2(PA2/PA3)** 는 기본적으로 **ST-LINK VCP** 경로와 연결되어 있어,  
-외부 RS485 모듈과 실통신 경로로 사용하기에 불편했습니다.
+외부 RS485 모듈과 독립적인 실통신 경로로 사용하기에 제약이 있었습니다.
 
 실제 실통신 검증은 다음과 같이 진행했습니다.
 
@@ -381,7 +368,7 @@ Modbus register 인터페이스를 단순하고 예측 가능하게 유지하기
 
 - Temperature: `25.34°C` → `2534`
 - Humidity: `48.91%` → `4891`
-- Pressure: `1013.2 hPa` → `10132` 대신 register 폭과 표현 단위를 고려해 `hPa x10` 사용
+- Pressure: `1013.2 hPa`를 `10132`로 표현할 수도 있지만, register 폭과 표현 단위를 고려해 최종적으로 `hPa x10` 형식을 사용했습니다.
 
 이 방식의 장점은 다음과 같습니다.
 
@@ -391,7 +378,7 @@ Modbus register 인터페이스를 단순하고 예측 가능하게 유지하기
 
 ### Verification
 
-구현된 Modbus RTU Slave는 **실물 하드웨어 셋업**, **logic analyzer 기반 UART 파형 계측**,  
+구현된 Modbus RTU Slave는 **실물 하드웨어 셋업**, **로직 애널라이저 기반 UART 파형 계측**,  
 그리고 **Modbus Poll**을 함께 사용해 검증했습니다.
 
 - Slave ID: `1`
@@ -418,7 +405,7 @@ Modbus Poll을 이용해 holding register를 주기적으로 읽고, 온도(x100
 이 검증 과정을 통해 단순히 Modbus Poll에서 값이 읽히는 것만 확인한 것이 아니라, 실제 하드웨어 셋업, UART request / response 파형, register 응답 구조까지 종합적으로 점검했습니다.
 ![Modbus Poll real-time chart](docs/imgs/modbus_poll_realtime_chart.png)
 
-#### 4. Concurrent CLI + Modbus Verification
+#### 4. CLI와 Modbus 동시 검증 (Concurrent CLI + Modbus Verification)
 
 최근에는 Modbus RTU용 UART와 CLI용 UART를 분리한 뒤, 외부 register polling과 내부 점검 명령이 동시에 수행되는지를 추가로 검증했습니다.
 
@@ -429,7 +416,7 @@ Modbus Poll을 이용해 holding register를 주기적으로 읽고, 온도(x100
 
 이를 통해 단순히 “Modbus 값이 읽힌다” 수준을 넘어서, 외부 통신과 내부 진단이 동시에 가능한 구조로 개선되었음을 실제 하드웨어 환경에서 확인했습니다.
 
-#### 5. Sensor Error Breakdown and Timeout Policy Adjustment
+#### 5. 센서 오류 분석 및 타임아웃 정책 조정 (Sensor Error Breakdown and Timeout Policy Adjustment)
 
 초기 버전에서는 BMP280 / AHT20의 총 에러 카운트만 확인 가능해, 오류가 발생해도 원인을 바로 특정하기 어려웠습니다.
 
