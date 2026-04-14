@@ -27,6 +27,7 @@
 #include "ssd1306.h"
 #include "uart_cmd.h"
 #include "modbus_rtu.h"
+#include "fw_version.h"
 
 /* USER CODE END Includes */
 
@@ -264,6 +265,10 @@ int main(void)
   BMP280_Init();
   AHT20_Init();
 
+ UART_LOG("%s Boot", PROJECT_NAME);
+ UART_LOG("FW Ver : %s", FW_VERSION);
+ UART_LOG("Build  : %s %s",__DATE__,__TIME__);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -283,6 +288,8 @@ int main(void)
         g_raw_humi = AHT20_Get_RawHumi();
 
         LED_Auto_Control(g_humi);
+
+
 
         if ((now - report_tick) >= OLED_REPORT_INTERVAL_MS)
         {
@@ -307,8 +314,6 @@ int main(void)
             snprintf(buf, sizeof(buf), "PRES: %ld HPA", (long)p);
             OLED_SetCursor(4, 0);
             OLED_Printf(buf);
-
-            UART_LOG("OLED Updated with Sensor Data!");
 
             if (auto_report_mode)
             {

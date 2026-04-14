@@ -21,6 +21,7 @@
 #include "bmp280.h"
 #include "aht20.h"
 #include "modbus_rtu.h"
+#include "fw_version.h"
 
 extern LED_Config_t g_led;
 
@@ -121,32 +122,7 @@ static void cmd_ENV(char *arg)
     UART_LOG(">> Ready.");
 }
 
-static void cmd_DEBUG(char *arg)
-{
-    (void)arg;
 
-    UART_LOG("--- Sensor RAW Data Debug ---");
-
-    // Decimal output shows magnitude, while hexadecimal output helps verify bit layout.
-    UART_LOG("[BMP280] adc_T=%ld (0x%05lX), adc_P=%ld (0x%05lX)",
-             (long)g_raw_adc_T, (unsigned long)g_raw_adc_T,
-             (long)g_raw_adc_P, (unsigned long)g_raw_adc_P);
-
-    // BMP280 / AHT20 raw humidity are 20-bit values, so 5 hex digits are expected.
-    UART_LOG("[AHT20] raw_humi=%lu (0x%05lX)",
-             (unsigned long)g_raw_humi, (unsigned long)g_raw_humi);
-
-    Env_Fixed_t t = Env_Get_Temp_Fixed();
-    Env_Fixed_t h = Env_Get_Humi_Fixed();
-    int32_t p = Env_Get_Press_Fixed();
-
-    UART_LOG("[RESULT] %s%d.%02dC | %d.%02d%% | %ldhPa",
-             t.sign_str, t.whole, t.frac,
-             h.whole, h.frac,
-             (long)p);
-
-    UART_LOG("-----------------------------");
-}
 
 /* -------------------------------------------------------------------------- */
 /* LED control commands                                                       */
@@ -386,6 +362,18 @@ static void cmd_SNAP(char *arg)
     UART_LOG("=== SYSTEM SNAP END ===");
 }
 
+
+static void cmd_VERSION(char *arg)
+{
+	UART_LOG("Project : %s", PROJECT_NAME);
+	UART_LOG("FW Ver  : %s", FW_VERSION);
+	UART_LOG("HW Ver  : %s", HW_VERSION);
+	UART_LOG("Build   : %s %s", __DATE__, __TIME__);
+}
+
+
+
+
 static const CommandEntry cmd_table[] =
 {
     {"LED",         cmd_LED},
@@ -402,8 +390,8 @@ static const CommandEntry cmd_table[] =
     {"TIMER",       cmd_TIMER},
     {"ENV",         cmd_ENV},
     {"REPORT",      cmd_REPORT},
-    {"DEBUG",       cmd_DEBUG},
     {"SENSSTAT",    cmd_SENSSTAT},
+	{"VERSION",     cmd_VERSION},
     {NULL,          NULL}
 };
 

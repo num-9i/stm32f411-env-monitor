@@ -208,12 +208,11 @@ CLI는 사람이 읽기 쉬운 형태로 현재 시스템 상태를 확인하고
 - `USART1`: Modbus RTU / RS485
 - `USART2 (ST-LINK VCP)`: CLI / debug console
 
-이 구조를 통해 Modbus Poll이 holding register를 주기적으로 읽는 동안에도, 터미널에서 `ENV`, `DEBUG`, `SNAP`, `SENSSTAT` 등의 명령을 동시에 사용할 수 있도록 했습니다.
+이 구조를 통해 Modbus Poll이 holding register를 주기적으로 읽는 동안에도, 터미널에서 `ENV`, `SNAP`, `SENSSTAT` 등의 명령을 동시에 사용할 수 있도록 했습니다.
 
 대표 명령은 다음과 같습니다.
 
 - `ENV` : 현재 환경값 출력
-- `DEBUG` : raw 데이터와 변환 결과 확인
 - `SNAP` : raw 값, 가공 값, valid flag, error count, Modbus register snapshot을 한 번에 출력
 - `SENSSTAT` : 센서별 총 에러 및 원인별 에러 카운터 확인
 - `REPORT` : 주기 보고 설정
